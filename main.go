@@ -11,10 +11,6 @@ import (
 )
 
 var (
-	//confirmURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-	//deathURL   = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
-	//recoverURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv"
-
 	dataURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-12-2020.csv"
 
 	locationFlag       string
@@ -48,22 +44,29 @@ func getData(url, field, place string) int64 {
 
 	for _, v := range lines {
 
-		fields := strings.Split(v, ",")
-		if len(fields) > 3 {
-			province := fields[2]
-			country := fields[3]
-
-			if strings.Contains(province, place) || strings.Contains(country, place) || place == "global" {
-
-				//fmt.Println(province)
-				//fmt.Println(country)
-
-				d := strings.Split(v, ",")
+		if place == "global" {
+			d := strings.Split(v, ",")
+			if len(v) >= field_number {
 				r, e := strconv.ParseInt(d[field_number], 10, 10)
 				if e == nil {
 					result = result + r
-				} else {
-					return int64(0)
+				}
+			}
+		} else {
+			fields := strings.Split(v, ",")
+			if len(fields) > 3 {
+				province := fields[2]
+				country := fields[3]
+
+				if strings.Contains(province, place) || strings.Contains(country, place) {
+
+					d := strings.Split(v, ",")
+					r, e := strconv.ParseInt(d[field_number], 10, 10)
+					if e == nil {
+						result = result + r
+					} else {
+						return int64(0)
+					}
 				}
 			}
 		}
