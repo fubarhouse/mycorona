@@ -11,7 +11,7 @@ import (
 
 var (
 	confirmURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-	deathURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
+	deathURL   = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 	recoverURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv"
 
 	locationFlag string
@@ -33,7 +33,7 @@ func getData(url string) string {
 	for _, v := range strings.Split(string(body), "\n") {
 		if strings.Contains(v, locationFlag) {
 			d := strings.Split(v, ",")
-			return d[len(d) - 1]
+			return d[len(d)-1]
 		}
 	}
 
@@ -58,18 +58,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	confirmed := getData(confirmURL)
-	dead := getData(deathURL)
-	recovered := getData(recoverURL)
-
 	if confirmedFlag {
-		fmt.Print(" C ", confirmed)
+		confirmed := getData(confirmURL)
+		fmt.Print(confirmed, " ")
 	}
 	if deadFlag {
-		fmt.Print(" D ", dead)
+		dead := getData(deathURL)
+		fmt.Print(dead, " ")
 	}
 	if recoveredFlag {
-		fmt.Print(" R ", recovered)
+		recovered := getData(recoverURL)
+		fmt.Print(recovered, " ")
 	}
 	return
 }
