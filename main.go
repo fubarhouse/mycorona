@@ -11,61 +11,120 @@ import (
 )
 
 var (
-	dataURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-12-2020.csv"
+	dataURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-14-2020.csv"
+
+	dataConfirmedURLs = []string{
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-12-2020.csv",
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
+	}
+	dataDeathsURLs = []string{
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv",
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv",
+	}
+	dataRecoveredURLs = []string{
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",
+	}
 
 	locationFlag       string
 	secondLocationFlag string
 )
 
-func getData(url, field, place string) int64 {
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	if err != nil {
-		fmt.Print(err)
-		os.Exit(1)
-	}
+var dataConfirmed []string
+var dataDeaths []string
+var dataRecovered []string
 
-	lines := strings.Split(string(body), "\n")
-	fields := strings.Split(lines[0], ",")
-	field_number := 0
+func init() {
 
-	for n, f := range fields {
-		if f == field {
-			field_number = n
+	for _, url := range dataConfirmedURLs {
+		resp, err := http.Get(url)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
 		}
+		body, err := ioutil.ReadAll(resp.Body)
+		for _, line := range strings.Split(string(body), "\n") {
+			dataConfirmed = append(dataConfirmed, line)
+		}
+		resp.Body.Close()
+		if err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+	}
+
+	for _, url := range dataDeathsURLs {
+		resp, err := http.Get(url)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		for _, line := range strings.Split(string(body), "\n") {
+			dataDeaths = append(dataDeaths, line)
+		}
+		resp.Body.Close()
+		if err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+	}
+
+	for _, url := range dataRecoveredURLs {
+		resp, err := http.Get(url)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		for _, line := range strings.Split(string(body), "\n") {
+			dataRecovered = append(dataRecovered, line)
+		}
+		resp.Body.Close()
+		if err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+	}
+
+}
+
+func getData(url, field, place string) int64 {
+
+	var data []string
+	switch field {
+	case "Recovered":
+		data = dataRecovered
+	case "Deaths":
+		data = dataDeaths
+	case "Active":
+		break
+	case "Confirmed":
+		data = dataConfirmed
 	}
 
 	var result int64
 
-	for _, v := range lines {
+	for _, v := range data {
 
 		if place == "global" {
 			d := strings.Split(v, ",")
-			if len(v) >= field_number {
-				r, e := strconv.ParseInt(d[field_number], 10, 10)
-				if e == nil {
-					result = result + r
-				}
+			r, e := strconv.ParseInt(d[len(d)-1], 10, 10)
+			if e == nil {
+				result = result + r
 			}
+
 		} else {
 			fields := strings.Split(v, ",")
 			if len(fields) > 3 {
-				province := fields[2]
-				country := fields[3]
+				province := fields[0]
+				country := fields[1]
 
-				if strings.Contains(province, place) || strings.Contains(country, place) {
+				if strings.Contains(province, place) || country == place {
 
 					d := strings.Split(v, ",")
-					r, e := strconv.ParseInt(d[field_number], 10, 10)
+					r, e := strconv.ParseInt(d[len(d)-1], 10, 10)
 					if e == nil {
 						result = result + r
-					} else {
-						return int64(0)
 					}
 				}
 			}
@@ -116,6 +175,7 @@ func main() {
 	if locationFlag == "" {
 		fmt.Println("ERROR")
 		os.Exit(1)
+		//locationFlag = "Australian Capital Territory"
 	}
 
 	if globalFlag {
@@ -124,14 +184,17 @@ func main() {
 
 	if activeFlag {
 		printData(dataURL, "Active", locationFlag, secondLocationFlag, globalString)
+		fmt.Println()
 	}
 
 	if confirmedFlag {
 		printData(dataURL, "Confirmed", locationFlag, secondLocationFlag, globalString)
+		fmt.Println()
 	}
 
 	if deadFlag {
 		printData(dataURL, "Deaths", locationFlag, secondLocationFlag, globalString)
+		fmt.Println()
 	}
 
 	if recoveredFlag {
