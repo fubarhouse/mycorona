@@ -1,3 +1,9 @@
+// package main is the binary for the mycorona application and provides
+// a simple cli to grab granular covid19 information for configured
+// data inputs such as locations, and types of data. It will return results
+// only, so basically the last entry in each dataset for the provided input
+// or regex match. This package is designed to be consumed by a polybar
+// script configuration item.
 package main
 
 import (
@@ -6,33 +12,69 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 var (
+	// dataConfirmedURLs are time-series data exports updated every 24 hours (UTC 00:00).
+	// These one contain data for confirmed cases of covid19.
 	dataConfirmedURLs = []string{
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv",
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
 	}
+	// dataDeathsURLs are time-series data exports updated every 24 hours (UTC 00:00).
+	// These one contain data for deaths from covid19.
 	dataDeathsURLs = []string{
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv",
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv",
 	}
+	// dataRecoveredURLs are time-series data exports updated every 24 hours (UTC 00:00).
+	// These one contain data for recovered cases of covid19.
 	dataRecoveredURLs = []string{
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",
 	}
 
-	locationFlag       string
+	// locationFlag is a string to select a location from the datasets
+	// The mechanism that selects the location also supports regex.
+	locationFlag string
+
+	// secondLocationFlag is a string to select a location from the datasets
+	// The mechanism that selects the location also supports regex.
 	secondLocationFlag string
+
+	// dataConfirmed contains the data for confirmed cases of covid19.
+	dataConfirmed []string
+
+	// dataDeaths contains the data for covid deaths.
+	dataDeaths []string
+
+	// dataRecovered contains data for the recovered covid19 cases
+	dataRecovered []string
+
+	// activeFlag will indicate the user wants to see data for property 'active'
+	activeFlag bool
+
+	// confirmedFlag will indicate the user wants to see data for property 'confirmed'
+	confirmedFlag bool
+
+	// deadFlag will indicate the user wants to see data for property 'dead'
+	deadFlag bool
+
+	// globalFlag will indicate the user wants to see global data for all selected properties
+	globalFlag bool
+
+	// recoveredFlag will indicate the user wants to see data for property 'recovered'
+	recoveredFlag bool
 )
 
-var dataConfirmed []string
-var dataDeaths []string
-var dataRecovered []string
-
+// init will on initialisation, populate the data.
+// a caching layer is yet to be explored.
 func init() {
 
+	// Populate the data for confirmed cases of covid19
+	// from the urls in dataConfirmedURLs.
 	for _, url := range dataConfirmedURLs {
 		resp, err := http.Get(url)
 		if err != nil {
@@ -50,6 +92,9 @@ func init() {
 		}
 	}
 
+	// Populate the data for cases of covid19 which
+	// have resulted in death. Data will be from the
+	// imported from the urls in dataDeathsURLs.
 	for _, url := range dataDeathsURLs {
 		resp, err := http.Get(url)
 		if err != nil {
@@ -67,6 +112,8 @@ func init() {
 		}
 	}
 
+	// Populate the data for cases recovered from covid19
+	// from the urls in dataRecoveredURLs.
 	for _, url := range dataRecoveredURLs {
 		resp, err := http.Get(url)
 		if err != nil {
@@ -86,40 +133,37 @@ func init() {
 
 }
 
-func getData(field, place string) int64 {
-
-	var data []string
-	switch field {
-	case "Recovered":
-		data = dataRecovered
-	case "Deaths":
-		data = dataDeaths
-	case "Active":
-		break
-	case "Confirmed":
-		data = dataConfirmed
+// intFormat will take an int64 and return a formatted integer
+// (string) which is simply the comma-separated equivalent.
+func intFormat(num int64) string {
+	str := fmt.Sprintf("%d", num)
+	re := regexp.MustCompile("(\\d+)(\\d{3})")
+	for n := ""; n != str; {
+		n = str
+		str = re.ReplaceAllString(str, "$1,$2")
 	}
+	return str
+}
+
+// getData will process the data variable and find the entries which can be
+// linked to up to two given location matching a regexp (providence/country)
+// It will grab the last column from each of these rows and add it to the
+// result. if the global flag is true, it will count all results in the
+// last column for the given row of the dataset.
+func getData(data []string, place string) int64 {
 
 	var result int64
 
 	for _, v := range data {
 
-		if place == "global" {
-			d := strings.Split(v, ",")
-			r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
-			if e == nil {
-				result = result + r
-			}
-
-		} else {
-
-			d := strings.Split(v, ",")
-			if len(d) > 1 {
-				if strings.Contains(d[0], place) || strings.Contains(d[1], place) {
-					r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
-					if e == nil {
-						result = result + r
-					}
+		d := strings.Split(v, ",")
+		if len(d) > 1 {
+			checkOne, _ := regexp.MatchString(place, d[0])
+			checkTwo, _ := regexp.MatchString(place, d[1])
+			if checkOne || checkTwo {
+				r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
+				if e == nil {
+					result = result + r
 				}
 			}
 		}
@@ -128,66 +172,67 @@ func getData(field, place string) int64 {
 	return result
 }
 
-func printActiveData(field, locationOne, locationTwo, locationThree string) {
+// printActiveData will print the qualified result from active
+// cases for the dataset and location. Active cases are a simple
+// operation of the confirmed cases with the recovered cases
+// subtracted from it. It will do this for the three potential
+// locations. Two optional and one results with the global data.
+func printActiveData(locationOne, locationTwo string) {
 
 	if locationOne != "" {
-		confirmed := getData("Confirmed", locationOne)
-		recovered := getData("Recovered", locationOne)
-		fmt.Print(confirmed - recovered)
+		confirmed := getData(dataConfirmed, locationOne)
+		recovered := getData(dataRecovered, locationOne)
+		fmt.Print(intFormat(confirmed - recovered))
 	}
 
 	if locationTwo != "" {
-		confirmed := getData("Confirmed", locationTwo)
-		recovered := getData("Recovered", locationTwo)
+		confirmed := getData(dataConfirmed, locationTwo)
+		recovered := getData(dataRecovered, locationTwo)
 		if locationOne != "" {
 			fmt.Print("/")
 		}
-		fmt.Print(confirmed - recovered)
+		fmt.Print(intFormat(confirmed - recovered))
 	}
 
-	if locationThree != "" {
-		confirmed := getData("Confirmed", locationThree)
-		recovered := getData("Recovered", locationThree)
+	if globalFlag {
+		confirmed := getData(dataConfirmed, ".*")
+		recovered := getData(dataRecovered, ".*")
 		if locationOne != "" || locationTwo != "" {
 			fmt.Print(":")
 		}
-		fmt.Print(confirmed - recovered)
+		fmt.Print(intFormat(confirmed - recovered))
 	}
 }
 
-func printData(field, locationOne, locationTwo, locationThree string) {
+// printData will query the data for the result and print it in the
+// standard format which is LOCATION1/LOCATION2:GLOBAL where any of
+// those fields can be absent.
+func printData(data []string, locationOne, locationTwo string) {
 
 	if locationOne != "" {
-		resultOne := getData(field, locationOne)
-		fmt.Print(resultOne)
+		resultOne := getData(data, locationOne)
+		fmt.Print(intFormat(resultOne))
 	}
 
 	if locationTwo != "" {
 		if locationOne != "" {
 			fmt.Print("/")
 		}
-		resultTwo := getData(field, locationTwo)
-		fmt.Print(resultTwo)
+		resultTwo := getData(data, locationTwo)
+		fmt.Print(intFormat(resultTwo))
 	}
 
-	if locationThree != "" {
+	if globalFlag {
 		if locationOne != "" || locationTwo != "" {
 			fmt.Print(":")
 		}
-		resultThree := getData(field, locationThree)
-		fmt.Print(resultThree, " ")
+		resultThree := getData(data, ".*")
+		fmt.Print(intFormat(resultThree), " ")
 	}
 
 }
 
 func main() {
-
-	var activeFlag bool
-	var confirmedFlag bool
-	var deadFlag bool
-	var globalFlag bool
-	var recoveredFlag bool
-	var globalString = ""
 
 	flag.BoolVar(&activeFlag, "a", false, "Show 'active' data.")
 	flag.BoolVar(&confirmedFlag, "c", false, "Show 'confirmed' data.")
@@ -199,27 +244,23 @@ func main() {
 
 	flag.Parse()
 
-	if globalFlag {
-		globalString = "global"
-	}
-
 	if activeFlag {
-		printActiveData("Active", locationFlag, secondLocationFlag, globalString)
+		printActiveData(locationFlag, secondLocationFlag)
 		fmt.Println()
 	}
 
 	if confirmedFlag {
-		printData("Confirmed", locationFlag, secondLocationFlag, globalString)
+		printData(dataConfirmed, locationFlag, secondLocationFlag)
 		fmt.Println()
 	}
 
 	if deadFlag {
-		printData("Deaths", locationFlag, secondLocationFlag, globalString)
+		printData(dataDeaths, locationFlag, secondLocationFlag)
 		fmt.Println()
 	}
 
 	if recoveredFlag {
-		printData("Recovered", locationFlag, secondLocationFlag, globalString)
+		printData(dataRecovered, locationFlag, secondLocationFlag)
 		fmt.Println()
 	}
 
