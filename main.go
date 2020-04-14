@@ -14,7 +14,7 @@ var (
 	dataURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-14-2020.csv"
 
 	dataConfirmedURLs = []string{
-		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-12-2020.csv",
+		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv",
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
 	}
 	dataDeathsURLs = []string{
@@ -88,7 +88,7 @@ func init() {
 
 }
 
-func getData(url, field, place string) int64 {
+func getData(field, place string) int64 {
 
 	var data []string
 	switch field {
@@ -108,21 +108,17 @@ func getData(url, field, place string) int64 {
 
 		if place == "global" {
 			d := strings.Split(v, ",")
-			r, e := strconv.ParseInt(d[len(d)-1], 10, 10)
+			r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
 			if e == nil {
 				result = result + r
 			}
 
 		} else {
-			fields := strings.Split(v, ",")
-			if len(fields) > 3 {
-				province := fields[0]
-				country := fields[1]
 
-				if strings.Contains(province, place) || country == place {
-
-					d := strings.Split(v, ",")
-					r, e := strconv.ParseInt(d[len(d)-1], 10, 10)
+			d := strings.Split(v, ",")
+			if len(d) > 1 {
+				if strings.Contains(d[0], place) || strings.Contains(d[1], place) {
+					r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
 					if e == nil {
 						result = result + r
 					}
@@ -137,17 +133,17 @@ func getData(url, field, place string) int64 {
 func printData(url, field, locationOne, locationTwo, locationThree string) {
 
 	if locationOne != "" {
-		resultOne := getData(url, field, locationOne)
+		resultOne := getData(field, locationOne)
 		fmt.Print(resultOne)
 	}
 
 	if locationTwo != "" {
-		resultTwo := getData(url, field, locationTwo)
+		resultTwo := getData(field, locationTwo)
 		fmt.Print("/", resultTwo)
 	}
 
 	if locationThree != "" {
-		resultThree := getData(url, field, locationThree)
+		resultThree := getData(field, locationThree)
 		fmt.Print(":", resultThree, " ")
 	}
 
