@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	dataURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/04-14-2020.csv"
-
 	dataConfirmedURLs = []string{
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv",
 		"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
@@ -130,7 +128,34 @@ func getData(field, place string) int64 {
 	return result
 }
 
-func printData(url, field, locationOne, locationTwo, locationThree string) {
+func printActiveData(field, locationOne, locationTwo, locationThree string) {
+
+	if locationOne != "" {
+		confirmed := getData("Confirmed", locationOne)
+		recovered := getData("Recovered", locationOne)
+		fmt.Print(confirmed - recovered)
+	}
+
+	if locationTwo != "" {
+		confirmed := getData("Confirmed", locationTwo)
+		recovered := getData("Recovered", locationTwo)
+		if locationOne != "" {
+			fmt.Print("/")
+		}
+		fmt.Print(confirmed - recovered)
+	}
+
+	if locationThree != "" {
+		confirmed := getData("Confirmed", locationThree)
+		recovered := getData("Recovered", locationThree)
+		if locationOne != "" || locationTwo != "" {
+			fmt.Print(":")
+		}
+		fmt.Print(confirmed - recovered)
+	}
+}
+
+func printData(field, locationOne, locationTwo, locationThree string) {
 
 	if locationOne != "" {
 		resultOne := getData(field, locationOne)
@@ -138,13 +163,19 @@ func printData(url, field, locationOne, locationTwo, locationThree string) {
 	}
 
 	if locationTwo != "" {
+		if locationOne != "" {
+			fmt.Print("/")
+		}
 		resultTwo := getData(field, locationTwo)
-		fmt.Print("/", resultTwo)
+		fmt.Print(resultTwo)
 	}
 
 	if locationThree != "" {
+		if locationOne != "" || locationTwo != "" {
+			fmt.Print(":")
+		}
 		resultThree := getData(field, locationThree)
-		fmt.Print(":", resultThree, " ")
+		fmt.Print(resultThree, " ")
 	}
 
 }
@@ -158,43 +189,38 @@ func main() {
 	var recoveredFlag bool
 	var globalString = ""
 
-	flag.BoolVar(&activeFlag, "a", false, "Specify username. Default is root")
-	flag.BoolVar(&confirmedFlag, "c", false, "Specify username. Default is root")
-	flag.BoolVar(&deadFlag, "d", false, "Specify pass. Default is password")
-	flag.BoolVar(&recoveredFlag, "r", false, "Specify pass. Default is password")
-	flag.BoolVar(&globalFlag, "g", false, "Specify pass. Default is password")
-	flag.StringVar(&locationFlag, "l", "", "Specify pass. Default is password")
-	flag.StringVar(&secondLocationFlag, "o", "", "Specify pass. Default is password")
+	flag.BoolVar(&activeFlag, "a", false, "Show 'active' data.")
+	flag.BoolVar(&confirmedFlag, "c", false, "Show 'confirmed' data.")
+	flag.BoolVar(&deadFlag, "d", false, "Show 'dead' data.")
+	flag.BoolVar(&recoveredFlag, "r", false, "Show 'recovered' data.")
+	flag.BoolVar(&globalFlag, "g", false, "Show global location data")
+	flag.StringVar(&locationFlag, "l", "", "Specify the primary location")
+	flag.StringVar(&secondLocationFlag, "o", "", "Specify the secondary/alternative location")
 
 	flag.Parse()
-
-	if locationFlag == "" {
-		fmt.Println("ERROR")
-		os.Exit(1)
-		//locationFlag = "Australian Capital Territory"
-	}
 
 	if globalFlag {
 		globalString = "global"
 	}
 
 	if activeFlag {
-		printData(dataURL, "Active", locationFlag, secondLocationFlag, globalString)
+		printActiveData("Active", locationFlag, secondLocationFlag, globalString)
 		fmt.Println()
 	}
 
 	if confirmedFlag {
-		printData(dataURL, "Confirmed", locationFlag, secondLocationFlag, globalString)
+		printData("Confirmed", locationFlag, secondLocationFlag, globalString)
 		fmt.Println()
 	}
 
 	if deadFlag {
-		printData(dataURL, "Deaths", locationFlag, secondLocationFlag, globalString)
+		printData("Deaths", locationFlag, secondLocationFlag, globalString)
 		fmt.Println()
 	}
 
 	if recoveredFlag {
-		printData(dataURL, "Recovered", locationFlag, secondLocationFlag, globalString)
+		printData("Recovered", locationFlag, secondLocationFlag, globalString)
+		fmt.Println()
 	}
 
 	os.Exit(0)
