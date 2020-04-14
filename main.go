@@ -177,18 +177,18 @@ func getData(data []string, place string) int64 {
 // operation of the confirmed cases with the recovered cases
 // subtracted from it. It will do this for the three potential
 // locations. Two optional and one results with the global data.
-func printActiveData(locationOne, locationTwo string) {
+func printActiveData() {
 
-	if locationOne != "" {
-		confirmed := getData(dataConfirmed, locationOne)
-		recovered := getData(dataRecovered, locationOne)
+	if locationFlag != "" {
+		confirmed := getData(dataConfirmed, locationFlag)
+		recovered := getData(dataRecovered, locationFlag)
 		fmt.Print(intFormat(confirmed - recovered))
 	}
 
-	if locationTwo != "" {
-		confirmed := getData(dataConfirmed, locationTwo)
-		recovered := getData(dataRecovered, locationTwo)
-		if locationOne != "" {
+	if secondLocationFlag != "" {
+		confirmed := getData(dataConfirmed, secondLocationFlag)
+		recovered := getData(dataRecovered, secondLocationFlag)
+		if locationFlag != "" {
 			fmt.Print("/")
 		}
 		fmt.Print(intFormat(confirmed - recovered))
@@ -197,7 +197,7 @@ func printActiveData(locationOne, locationTwo string) {
 	if globalFlag {
 		confirmed := getData(dataConfirmed, ".*")
 		recovered := getData(dataRecovered, ".*")
-		if locationOne != "" || locationTwo != "" {
+		if locationFlag != "" || secondLocationFlag != "" {
 			fmt.Print(":")
 		}
 		fmt.Print(intFormat(confirmed - recovered))
@@ -207,23 +207,23 @@ func printActiveData(locationOne, locationTwo string) {
 // printData will query the data for the result and print it in the
 // standard format which is LOCATION1/LOCATION2:GLOBAL where any of
 // those fields can be absent.
-func printData(data []string, locationOne, locationTwo string) {
+func printData(data []string) {
 
-	if locationOne != "" {
-		resultOne := getData(data, locationOne)
+	if locationFlag != "" {
+		resultOne := getData(data, locationFlag)
 		fmt.Print(intFormat(resultOne))
 	}
 
-	if locationTwo != "" {
-		if locationOne != "" {
+	if secondLocationFlag != "" {
+		if locationFlag != "" {
 			fmt.Print("/")
 		}
-		resultTwo := getData(data, locationTwo)
+		resultTwo := getData(data, secondLocationFlag)
 		fmt.Print(intFormat(resultTwo))
 	}
 
 	if globalFlag {
-		if locationOne != "" || locationTwo != "" {
+		if locationFlag != "" || secondLocationFlag != "" {
 			fmt.Print(":")
 		}
 		resultThree := getData(data, ".*")
@@ -245,22 +245,22 @@ func main() {
 	flag.Parse()
 
 	if activeFlag {
-		printActiveData(locationFlag, secondLocationFlag)
+		printActiveData()
 		fmt.Println()
 	}
 
 	if confirmedFlag {
-		printData(dataConfirmed, locationFlag, secondLocationFlag)
+		printData(dataConfirmed)
 		fmt.Println()
 	}
 
 	if deadFlag {
-		printData(dataDeaths, locationFlag, secondLocationFlag)
+		printData(dataDeaths)
 		fmt.Println()
 	}
 
 	if recoveredFlag {
-		printData(dataRecovered, locationFlag, secondLocationFlag)
+		printData(dataRecovered)
 		fmt.Println()
 	}
 
