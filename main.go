@@ -161,7 +161,8 @@ func getData(data []string, place string) int64 {
 			checkOne, _ := regexp.MatchString(place, d[0])
 			checkTwo, _ := regexp.MatchString(place, d[1])
 			if checkOne || checkTwo {
-				r, e := strconv.ParseInt(d[len(d)-1], 0, 32)
+				value := strings.TrimRight(d[len(d)-1], "\r")
+				r, e := strconv.ParseInt(value, 0, 32)
 				if e == nil {
 					result = result + r
 				}
